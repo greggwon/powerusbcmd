@@ -21,9 +21,7 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 {
 	if(argc == 1)
 	{
-		fprintf(stderr, "%s: missing file operand\n", argv[0]);
-		fprintf(stderr, "Try `%s --help` for more information.\n", argv[0]);
-		return 1;
+		throw LinuxPowerUSBError( "%s: missing file operand\n", argv[0]);
 	}
 	else if(argc == 2)
 	{
@@ -35,17 +33,7 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 		else
 		{
 			int p = atoi( argv[1] );
-			int ps[3] = { p ==1, p ==2, p ==3 };
-			if( p > 0 && p < 4 ) {
-				if(lp.pwrusb.readPortState(&ps[0], &ps[1], &ps[2]) > 0 ) {
-					lp.reportStatus(ps[p-1], p);
-				}
-			}
-			else
-			{
-				fprintf(stderr,"Invalid Argument: Try `%s --help` for more information.\n", argv[0]);
-				return 1;
-			}
+			lp.reportStatus(lp.getPortState(p), p);
 		}
 	}
 	else if(argc == 3)
@@ -53,38 +41,13 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 		if(strcmp(argv[1], "-d") == 0)
 		{
 			int p = atoi( argv[2] );
-			int ps[3] = { p == 1, p == 2, p == 3 };
-			if( p > 0 && p < 4 ) {
-				if( lp.pwrusb.readDefaultPortState(&ps[0], &ps[1], &ps[2]) > 0 ) {
-					lp.reportDefault(ps[p-1], p);
-				}
-				else {
-					fprintf( stderr, "Could not read defaults for %d\n", p);
-					return 1;
-				}
-			}
-			else
-			{
-				fprintf(stderr,"Invalid Argument(s): Try `%s --help` for more information.\n", argv[0]);
-				return 1;
-			}
+			lp.reportDefault(lp.getPortDefaultState(p), p);
 		}
 		else
 		{
 			int p = atoi(argv[1]);
-			bool how = strcmp(argv[2],"on") == 0;  // match "off" == 0
-			
-			if( p > 0 && p < 4 ) {
-				lp.pwrusb.setPort(
-					p == 1 ? how : PWRUSB_NO_CHANGE,
-					p == 2 ? how : PWRUSB_NO_CHANGE,
-					p == 3 ? how : PWRUSB_NO_CHANGE );
-			}
-			else
-			{
-				fprintf(stderr,"Invalid Argument(s): Try `%s --help` for more information.\n", argv[0]);	
-				return 1;
-			}
+			int how = strcmp( argv[2], "on" ) == 0;
+			lp.setPortState( p, how );
 		}
 	}
 	else if(argc == 4)
@@ -93,30 +56,16 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 		{
 			int p = atoi( argv[2] );
 			int how = strcmp( argv[3], "on" ) == 0;
-			
-			if( p > 0 && p < 4 ) {
-				lp.pwrusb.setDefaultState(
-
-					p == 1 ? how : PWRUSB_NO_CHANGE,
-					p == 2 ? how : PWRUSB_NO_CHANGE,
-					p == 3 ? how : PWRUSB_NO_CHANGE );
-			}
-			else
-			{
-				fprintf(stderr,"Invalid Argument(s): Try `%s --help` for more information.\n", argv[0]);	
-				return 1;
-			}
+			lp.setPortDefaultState( p, how );
 		}
 		else
 		{
-			fprintf(stderr,"Invalid Argument(s): Try `%s --help` for more information.\n", argv[0]);	
-			return 1;
+			throw LinuxPowerUSBError("Invalid Argument(s): Try `%s --help` for more information.", argv[0]);	
 		}
 	}
 	else
 	{
-		fprintf(stderr,"Incorrect Usage: Try `%s --help` for more information.\n", argv[0]);
-		return 1;
+		throw LinuxPowerUSBError("Incorrect Usage: Try `%s --help` for more information.", argv[0]);
 	}
 	return 0;
 }
@@ -128,5 +77,10 @@ int main(int argc, char* argv[])
 	LinuxPowerUSB p;
 	p.setDebug(false);
 	p.Setup();
-	return handleRequest(p, argc, argv);
+	try {
+		return handleRequest(p, argc, argv);
+	} catch( LinuxPowerUSBError &ex ) {
+		p.error( "%s\n", ex.what() );
+	}
+	return 2;
 }
