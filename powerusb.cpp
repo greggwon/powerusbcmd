@@ -1,7 +1,5 @@
-#include"powerusb.h"
+#include "powerusb.h"
 #include "LinuxPowerUSB.hpp"
-#include <cstddef>
-#include <string>
 
 void usage(char **argv) {
 	fprintf( stderr, "Usage:\n");
