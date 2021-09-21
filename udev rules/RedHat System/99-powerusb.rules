@@ -1,0 +1,1 @@
+BUS=="usb", SYSFS{idVendor}=="04d8", SYSFS{idProduct}=="003f", MODE="0666"
