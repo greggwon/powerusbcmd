@@ -27,7 +27,7 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 	}
 
 	if( port == 0 ) {
-		throw LinuxPowerUSBError( "missing port #: -p N required\n");
+		throw LinuxPowerUSBError( "missing port #: -p N required");
 	}
 
 	bool how = false;
@@ -63,6 +63,7 @@ int main(int argc, char* argv[])
 		return handleRequest(p, argc, argv);
 	} catch( LinuxPowerUSBError &ex ) {
 		p.error( "%s: %s\n", argv[0], ex.what() );
+		usage( argv );
 	}
 	return 2;
 }
