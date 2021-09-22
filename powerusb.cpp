@@ -49,56 +49,6 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 		else
 			lp.setPortState( port, how );
 	}
-#if 0
-	
-	if(argc == 1)
-	{
-		throw LinuxPowerUSBError( "%s: missing operands\n", argv[0]);
-	}
-	else if(argc == 2)
-	{
-		if(strcmp(argv[1], "--help") == 0)
-		{
-			usage(argv);
-			return 1;
-		}
-		else
-		{
-			int p = atoi( argv[1] );
-			lp.reportStatus(lp.getPortState(p), p);
-		}
-	}
-	else if(argc == 3)
-	{
-		if(strcmp(argv[1], "-d") == 0)
-		{
-			int p = atoi( argv[2] );
-			lp.reportDefault(lp.getPortDefaultState(p), p);
-		}
-		else
-		{
-			int p = atoi(argv[1]);
-			int how = strcmp( argv[2], "on" ) == 0;
-		}
-	}
-	else if(argc == 4)
-	{
-		if(strcmp(argv[1], "-d") == 0)
-		{
-			int p = atoi( argv[2] );
-			int how = strcmp( argv[3], "on" ) == 0;
-			lp.setPortDefaultState( p, how );
-		}
-		else
-		{
-			throw LinuxPowerUSBError("Invalid Argument(s): Try `%s --help` for more information.", argv[0]);	
-		}
-	}
-	else
-	{
-		throw LinuxPowerUSBError("Incorrect Usage: Try `%s --help` for more information.", argv[0]);
-	}
-#endif
 	return 0;
 }
 
