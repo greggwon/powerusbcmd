@@ -36,7 +36,28 @@ PowerUSB API :
 		try {
 			p.Setup();
 
-			... use functions from class definition ...
+			// ... use functions from class definition ...
+
+			// p.setPortDefaultOff( int p );
+			// p.setPortDefaultState( int p, bool how );
+			// p.setDefaults( int state1, int state2, int state3 );
+			// p.setPortStates( int state1, int state2, int state3 );
+			// p.setPortState( int p, bool state );
+			// p.setPortOn( int port );
+			// p.setPortOff( int port );
+
+			// Turn port 3 on if not on
+			if( ! p.getPortState( 3 ) ) {
+				p.setPortState(3, true );
+			}
+
+			// Make sure port 2 defaults to on
+			p.setPortDefaultOn( 2 );
+
+			// Make sure port 1 is off if on by default
+			if( p.getPortDefaultState( 1 ) ) {
+				p.setPortState( 1, false );
+			}
 
 		} catch( LinuxPowerUSBError &ex ) {
 			p.error( "%s: %s\n", argv[0], ex.what() );
