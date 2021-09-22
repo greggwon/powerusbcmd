@@ -165,17 +165,16 @@ public :
 		throw LinuxPowerUSBArgsError("Invalid port number: %d", p );
 	}
 
-	void  reportStatus(int status, int port)
+	void  reportStatus(int status, int port, bool verbose = true)
 	{
-		if(status == 0) report("Port %d = Off\n", port);
-		if(status == 1) report("Port %d = On\n", port);
+		if( verbose ) report("Port %d = %s\n", port, status ? "On" : "Off");
+		else report("%s\n", status ? "On" : "Off");
 	}
 
-	void  reportDefault(int status, int port)
+	void  reportDefault(int status, int port, bool verbose = true)
 	{
-		if(status == 0) report("Default Port %d State = Off\n", port);
-		else if(status == 1) report("Default Port %d State = On\n", port);
-		else error("unknown default status: %d for port %d\n", status, port );
+		if( verbose ) report("Default Port %d State = %s\n", port, status ? "On" : "Off");
+		else report("%s\n", status ? "On" : "Off");
 	}
 };
 

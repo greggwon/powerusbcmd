@@ -2,26 +2,58 @@
 #include "LinuxPowerUSB.hpp"
 
 void usage(char **argv) {
-	fprintf( stderr, "Usage:\n");
-	fprintf( stderr, "  1) %s portnumber state       ---Sets the state of the respective port---\n", argv[0]);
-	fprintf( stderr, "     portnumber = 1-3, state = on/off\n");			
-	fprintf( stderr, "     Ex: powerusb 2 on               ---Switches on Port 2---\n");
-	fprintf( stderr, "  2) %s -d portnumber state    ---Sets the default state of the respective port---\n", argv[0]);
-	fprintf( stderr, "     portnumber = 1-3, state = on/off\n");
-	fprintf( stderr, "     Ex: powerusb -d 2 on            ---Sets the default state of Port 2 to on---\n");			
-	fprintf( stderr, "  3) %s portnumber             ---Reads the state of the respective port---\n", argv[0]);
-	fprintf( stderr, "     portnumber = 1-3\n");
-	fprintf( stderr, "     Ex: powerusb 2                  ---Returns the state of Port 2---\n");
-	fprintf( stderr, "  4) %s -d portnumber          ---Reads the default state of the respective port---\n", argv[0]);
-	fprintf( stderr, "     portnumber = 1-3\n");
-	fprintf( stderr, "     Ex: powerusb -d 2               ---Returns the default state of Port 2---\n");
+	fprintf( stderr, "Usage: %s [-dev] -p port [-s state]\n", argv[0]);
 }
 
 int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 {
+	bool verbose = false;
+	bool defState = false;
+	bool useexit = false;
+	int port = 0;
+	char *state = NULL;
+	int c;
+	while( (c = getopt(argc, argv, "s:p:dev")) != -1 ) {
+		switch( c ) {
+			case 'v': verbose = true; break;
+			case 'd': defState = true; break;
+			case 'p': port = atoi(optarg); break;
+			case 's': state = strdup(optarg); break;
+			case 'e': useexit = true; break;
+			case -1: break;
+			default:
+				throw LinuxPowerUSBError( "bad argument: '%d'", c);
+		}
+	}
+
+	if( port == 0 ) {
+		throw LinuxPowerUSBError( "missing port #: -p N required\n");
+	}
+
+	bool how = false;
+	if( state != NULL ) {
+		how = strcasecmp( state, "on") == 0;
+	}
+
+	if( defState ) {
+		if( state == NULL )
+			if( useexit ) return(lp.getPortDefaultState(port));
+			else lp.reportDefault(lp.getPortDefaultState(port), port, verbose);
+		else
+			lp.setPortDefaultState( port, how );
+
+	} else {
+		if( state == NULL )
+			if( useexit ) return(lp.getPortState(port));
+			else lp.reportStatus(lp.getPortState(port), port, verbose);
+		else
+			lp.setPortState( port, how );
+	}
+#if 0
+	
 	if(argc == 1)
 	{
-		throw LinuxPowerUSBError( "%s: missing file operand\n", argv[0]);
+		throw LinuxPowerUSBError( "%s: missing operands\n", argv[0]);
 	}
 	else if(argc == 2)
 	{
@@ -47,7 +79,6 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 		{
 			int p = atoi(argv[1]);
 			int how = strcmp( argv[2], "on" ) == 0;
-			lp.setPortState( p, how );
 		}
 	}
 	else if(argc == 4)
@@ -67,6 +98,7 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 	{
 		throw LinuxPowerUSBError("Incorrect Usage: Try `%s --help` for more information.", argv[0]);
 	}
+#endif
 	return 0;
 }
 
@@ -75,12 +107,12 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 int main(int argc, char* argv[])
 {
 	LinuxPowerUSB p;
-	p.setDebug(false);
-	p.Setup();
 	try {
+		p.setDebug(false);
+		p.Setup();
 		return handleRequest(p, argc, argv);
 	} catch( LinuxPowerUSBError &ex ) {
-		p.error( "%s\n", ex.what() );
+		p.error( "%s: %s\n", argv[0], ex.what() );
 	}
 	return 2;
 }
