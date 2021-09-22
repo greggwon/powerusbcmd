@@ -1,0 +1,88 @@
+.TH powerusb 1 2021-09-22 PowerUSB Users Guide
+.SH NAME
+powerusb \- Command line interface to the 
+.B PowerUSB
+.I USB controlled
+power strip.
+.SH SYNOPSIS
+powerusb [-dev] -p port [-s on/off]
+.SH DESCRIPTION
+This application provides a command line interface to the
+.B libpowerusb 
+library.  The port argument can be 1, 2 or 3.  The -s value is case independent text of 'on' or 'off'.
+The application will use the libusb-1.0.0 and libhid facilities to connect to the last found USB device
+with the
+.B VENDOR_ID
+of
+.I 0x04f8
+and the
+.B PRODUCT_ID
+of
+.I 0x003f.
+.SH OPTIONS
+.IP -e
+Use exit code to report state instead of string values printed.
+.IP -d
+Switch to default state manipulation instead of control of ports.
+.IP "-p N"
+Specify port number as N, 1, 2 or 3 must be provided.
+.IP "-s on/off"
+Specify state to set as default (-d also used) or as current state.
+.IP -v
+Increase verbosity of detail printed.
+.SH EXIT STATUS
+If the -e argument is specified than a 0 exit means off and a 1 exit means on.
+An exit code of 2 always is used for errors.
+.SH ENVIRONMENT
+The libpowerusb.so library needs to be in the system library path, or you can use the LD_LIBRARY_PATH
+environment variable to specify the directory it should be loaded from.
+.SH FILES
+The /etc/udev/rules.d directory will need a udev control rules file to specify permission changes
+on the device files if a non-root user will be using this command.
+.SH VERSIONS
+This version is separate and incompatible with the PowerUSB released original Linux support.
+.SH EXAMPLE
+To change the default state of port 1 to on, you can use the following command line:
+.PP
+.RS 4
+$ powerusb -d -p 1 -s on
+.RE 
+.PP
+To switch port 2 to on, the following command line is used.
+.PP
+.RS 4
+$ powerusb -p 2 -s on
+.RE
+.PP
+To see the current state of port 2, the following command line is used.
+.PP
+.RS 4
+$ powerusb -p 2
+On
+.RE
+.PP
+To use the exit code to detect the current state of a port, use the -e command line argument.
+A 0 exit code indicates off and a 1 exit code indicates on.  The following shellscript could be
+used to get the current state of the passed port number.
+.RS 4
+.PP
+.PD 0
+#!/bin/bash
+.P
+if powerusb -p $1 e; then
+.P
+	echo "Port $1 is not on"
+.P
+else
+.P
+	echo "Port $1 is on"
+.P
+fi
+.PP
+.RE
+.SH AUTHORS
+.PP
+SeqTek LLC used the original distributed support for Linux to create this updated version.
+.SH SEE ALSO
+.B libusb-1.0.0(3),
+.B libhid(3)
