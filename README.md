@@ -63,5 +63,6 @@ LinuxPowerUSB API :
 	}
 
 The 'powerusb' command line program :
+
 	The included powerusb.cpp source code provides an example command line tool to test and
 	use the LinuxPowerUSB class APIs to control a PowerUSB power strip.
