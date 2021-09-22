@@ -1,11 +1,11 @@
-PowerUSB Note :
+Linux powerusb Notes :
 
 	The source code has been compiled and tested on Ubuntu 20.04 with no issues. The usage
 	of packages and installation of the packages hereby mentioned are with respect to Ubuntu.
 	For other than Ubuntu based systems use the equivalent platform specific packages
 	and install procedure.
 
-PowerUSB usage procedure :
+LinuxPowerUSB class usage :
 	
 	Before making use of powerusb application make sure the following packages are installed :
 		1. libudev
@@ -21,7 +21,7 @@ Source Directory Structure :
 
 	- Makefile - use the 'make' command to build the powerusb executable
 
-PowerUSB API :
+LinuxPowerUSB API :
 
 	The following example shows how to invoke functions from the LinuxPowerUSB class APIs.
 
@@ -61,3 +61,7 @@ PowerUSB API :
 		}
 		return 2;
 	}
+
+'powerusb' command line program :
+	The included powerusb.cpp source code provides an example command line tool to test and
+	use the LinuxPowerUSB class APIs to control a PowerUSB power strip.
