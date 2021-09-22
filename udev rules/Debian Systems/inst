@@ -1,7 +1,0 @@
-base='/devices/pci0000:00/0000:00:0c.0/usb1/1-2/1-2:1.0/0003:04D8:003F.*'
-id=`cd /sys;echo -n /;echo devices/pci0000:00/0000:00:0c.0/usb1/1-2/1-2:1.0/0003:04D8:003F.*`
-case $id in
-	*'*') echo "$0: $base: device not attached" >&2;exit 1;;
-	*)
-esac
-echo $id:1.0 >/sys/bus/usb/drivers/usbhid/unbind

@@ -19,9 +19,6 @@ PowerUSB usage procedure :
 
 Source Directory Structure :
 
-	- udev (contains udev rules for Redhat and Debian based systems, place 99-powerusb.rules
-          into /etc/udev/rules.d with respect to the system)
-
 	- Makefile - use the 'make' command to build the powerusb executable
 
 PowerUSB API :
