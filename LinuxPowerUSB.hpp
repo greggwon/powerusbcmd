@@ -91,6 +91,10 @@ public :
 		debug("init(&i) = %d max units, model=%d\n", v, i );
 	}
 
+	int generateClock(int port, int onTime, int offTime) {
+		return pwrusb.generateClock(port, onTime, offTime);
+	}
+
 	bool  checkStatus()
 	{
 		int status = pwrusb.checkStatus();
@@ -151,11 +155,35 @@ public :
 	void setPortOn( int port ) {
 		setPortState( port, true );
 	}
+	int setCurrentDevice( int index ) {
+		return pwrusb.setCurrentDevice( index );
+	}
+	int getCurrentDevice() {
+		return pwrusb.getCurrentDevice();
+	}
+	
 	void setPortOff( int port ) {
 		setPortState( port, false );
 	}
+	void getOutputStates( int states[7] ) {
+		pwrusb.getOutputState( states );
+	}
+
+	int setOutputState(int outputs[]) {
+		return pwrusb.setOutputState(outputs);
+	}
+
+	void setIODirection( int directions[7] ) {
+		pwrusb.setIODirection( directions );
+	}
 	void getInputStates( int states[7] ) {
 		pwrusb.getInputState( states );
+	}
+	int getVersion() {
+		return pwrusb.getFirmwareVersion();
+	}
+	std::string getModel() {
+		return pwrusb.getModelName();
 	}
 	bool getPortState( int p ) { 
 		int ps[3] = { p ==1, p ==2, p ==3 };
