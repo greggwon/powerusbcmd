@@ -5,7 +5,7 @@ powerusb \- Command line interface to the
 .I USB controlled
 power strip.
 .SH SYNOPSIS
-powerusb [-dev] -p port [-s on/off]
+powerusb [-devw] -p port [-s on/off]
 .SH DESCRIPTION
 This application provides a command line interface to the
 .B libpowerusb 
@@ -28,6 +28,9 @@ Switch to default state manipulation instead of control of ports.
 Specify port number as N, 1, 2 or 3 must be provided.
 .IP "-s on/off"
 Specify state to set as default (-d also used) or as current state.
+.IP -w
+Open in windowing mode providing a curses interface to changing plug state
+and observing inputs and outputs.
 .IP -v
 Increase verbosity of detail printed.
 .SH EXIT STATUS
