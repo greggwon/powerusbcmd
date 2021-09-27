@@ -11,6 +11,9 @@
 #include <cstdarg>
 #include <PwrUSBImp.h>
 
+/**
+ *  Exception for errors interacting with the USB interface and commanding changes
+ */
 class LinuxPowerUSBError : public virtual std::exception {
 	std::string message;
 public:
@@ -26,12 +29,18 @@ public:
 	}
 };
 
+/**
+ *  Exception for command line errors.
+ */
 class LinuxPowerUSBArgsError : public virtual LinuxPowerUSBError {
 public:
 	template <typename T, typename...Args>
 	LinuxPowerUSBArgsError( T msg, Args...args ) : LinuxPowerUSBError(msg, args...) {}
 };
 
+/***
+ *  Main class for interacting with the PowerUSB device via the HID library interface class, PowerUSB.
+ */
 class LinuxPowerUSB
 {
 private:
@@ -144,6 +153,9 @@ public :
 	}
 	void setPortOff( int port ) {
 		setPortState( port, false );
+	}
+	void getInputStates( int states[7] ) {
+		pwrusb.getInputState( states );
 	}
 	bool getPortState( int p ) { 
 		int ps[3] = { p ==1, p ==2, p ==3 };
