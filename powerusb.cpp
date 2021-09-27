@@ -15,14 +15,18 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 {
 	bool defState = false;
 	bool useexit = false;
-	int port = 0;
+	int port = 0, input=0, output=0;
 	char *state = NULL;
 	bool windowing = false;
 	bool inputs = false;
+	bool outputs = false;
 	int c;
-	while( (c = getopt(argc, argv, "s:p:devwi")) != -1 ) {
+	while( (c = getopt(argc, argv, "s:p:I:devwioO:")) != -1 ) {
 		switch( c ) {
+			case 'O': output = atoi(optarg); break;
+			case 'I': input = atoi(optarg); break;
 			case 'i': inputs = true; break;
+			case 'o': outputs = true; break;
 			case 'v': verbose = true; break;
 			case 'w': windowing = true; break;
 			case 'd': defState = true; break;
@@ -35,7 +39,7 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 		}
 	}
 	if( windowing ) return 5;
-	if( port == 0 && !inputs ) {
+	if( input == 0 && output == 0 && port == 0 && !inputs ) {
 		throw LinuxPowerUSBError( "missing port #: -p N required");
 	}
 
@@ -60,15 +64,57 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 				lp.setPortState( port, how );
 		}
 	}
+
+	if( output > 0 ) {
+		int st[numinput] = {0};
+		if( output < 0 || output >= numinput ) {
+			throw new LinuxPowerUSBArgsError( "Bad output #%d", input );
+		}
+
+		if( state !=  NULL ) {
+			st[output] = how;
+			lp.setOutputState( st );
+		} else {
+			lp.getOutputStates( st );
+			if( verbose ) {
+				lp.report("Output #%d = %d\n", output, st[output-1] );
+			} else {
+				exit( st[output-1] );
+			}
+		}
+	}
+
+	if( input > 0 ) {
+		int st[numinput];
+		if( input >= numinput ) {
+			throw new LinuxPowerUSBArgsError( "Bad input #%d", input );
+		}
+		lp.getInputStates(st);
+		if( verbose ) {
+			lp.report("input #%d = %d\n", input, st[input-1] );
+		} else {
+			exit(st[input-1]);
+		}
+	}
 	if( inputs ) {
 		int st[8];
 		lp.getInputStates(st);
-		printf("Inputs: ");
+		lp.report("Inputs: ");
 		for( int i = 0; i < numinput; ++i ) {
-			printf("%d=%d", i+1, st[i] );
-			if( i < 6 ) printf(", ");
+			lp.report("%d=%d", i+1, st[i] );
+			if( i < 6 ) lp.report(", ");
 		}
-		printf("\n");
+		lp.report("\n");
+	}
+	if( outputs ) {
+		int st[8];
+		lp.getOutputStates(st);
+		lp.report("Outputs: ");
+		for( int i = 0; i < numinput; ++i ) {
+			lp.report("%d=%d", i+1, st[i] );
+			if( i < 6 ) lp.report(", ");
+		}
+		lp.report("\n");
 	}
 	return 0;
 }

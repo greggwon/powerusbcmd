@@ -43,9 +43,9 @@ public:
  */
 class LinuxPowerUSB
 {
-private:
 	static bool debugging;
 
+public:
 	template <typename T, typename... Args>
 	void report( T fmt, Args... args ) {
 		int len = std::snprintf( nullptr, 0, fmt, args... );
@@ -53,6 +53,7 @@ private:
 		std::snprintf( buf, sizeof(buf), fmt, args... );
 		printf( "%s", buf );
 	}
+private:
 
 	template <typename T, typename... Args>
 	void debug( T fmt, Args... args ) {
