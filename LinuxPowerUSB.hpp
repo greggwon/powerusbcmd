@@ -80,9 +80,9 @@ public :
 
 	void setDebug(bool how) { debugging = how; PowerUSB::debugging = how; }
 
-	void Setup() {
+	bool Setup() {
 		init();
-		checkStatus();
+		return checkStatus();
 	}
 
 	void  init()
@@ -157,7 +157,7 @@ public :
 		setPortState( port, true );
 	}
 	int setCurrentDevice( int index ) {
-		return pwrusb.setCurrentDevice( index );
+		return pwrusb.selectDevice( index );
 	}
 	int getCurrentDevice() {
 		return pwrusb.getCurrentDevice();
@@ -185,6 +185,51 @@ public :
 	}
 	std::string getModel() {
 		return pwrusb.getModelName();
+	}
+	bool powerCycleIn( int seconds ) {
+		return pwrusb.powerCycle( seconds) > 0;
+	}
+	bool sendHeartBeat() {
+		return pwrusb.sendHeartBeat() > 0;
+	}
+	bool closeAll() {
+		return pwrusb.close() > 0;
+	}
+	bool setupPortToggle( int port, int onTimeSecs, int offTimeSecs ) {
+		return pwrusb.generateClock( port, onTimeSecs, offTimeSecs ) > 0;
+	}
+
+	bool resetPowerUSB() {
+		return pwrusb.resetBoard() > 0;
+	}
+
+	int setOverload( int overload ) {
+		return pwrusb.setOverload( overload );
+	}
+	/**
+	 * Return -1 = not connected, 0 = not in overload, >= 1 in overload
+	 */
+	int inOverload() {
+		return pwrusb.getOverload();
+	}
+	/**
+	 *  Starts watchdog in the PowerUSB. 
+	 *  HbTimeSec:    Expected time for heartbeat
+	 *  numHbMisses:  Number of accepted consecutive misses in heartbeat
+	 *  resetTimeSec: Amount of time to switch off the computer outlet
+	 */
+	bool setWatchDogInterval( int heartBeatSecs, int numMissesAllowed, int resetTimeSecs ) {
+		return pwrusb.startWatchdogTimer( heartBeatSecs, numMissesAllowed, resetTimeSecs ) > 0;
+	}
+	bool stopWatchDog() {
+		return pwrusb.stopWatchdogTimer() > 0;
+	}
+	/**
+	 *  Get the current state of Watchdog in PowerUSB
+	 *  Return 0: watchdog is not running, 1: Watchdog is active, 2: In PowerCycle phase
+	 */
+	int getWatchdogStatus() {
+		return pwrusb.getWatchdogStatus();
 	}
 	bool getPortState( int p ) { 
 		int ps[3] = { p ==1, p ==2, p ==3 };

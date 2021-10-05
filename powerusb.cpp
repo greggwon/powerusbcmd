@@ -4,9 +4,24 @@
 #include <curses.h>
 
 const int numinput = 7;
+static bool debugging = false;
+
+template <typename T, typename... Args>
+static void debug( T fmt, Args... args ) {
+	int len = std::snprintf( nullptr, 0, fmt, args... );
+	char buf[len+100];
+	std::snprintf( buf, sizeof(buf), fmt, args... );
+	if( debugging ) {
+		fprintf( stdout, "%s\n", buf );
+		fflush(stdout);
+	}
+}
 
 void usage(char **argv) {
-	fprintf( stderr, "Usage: %s [-devw] -p port [-s state]\n", argv[0]);
+	fprintf( stderr, "Usage: %s [-devD] -p port [-s state]\n", argv[0]);
+	fprintf( stderr, "       %s -r [-D] <reset-for>\n", argv[0] );
+	fprintf( stderr, "       %s -w [-D]\n", argv[0] );
+	fprintf( stderr, "       %s -R watchDogResetInv [-D] [-W watchdogInv] [-F watchdogFailCount]\n", argv[0] );
 }
 
 static bool verbose = false;
@@ -20,9 +35,20 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 	bool windowing = false;
 	bool inputs = false;
 	bool outputs = false;
+	int watchdogFail = 1;
+	int watchdog = 10;
+	int reset = 0;
+	int watchdogReset = 5;
+	bool setWatchDog = false;
 	int c;
-	while( (c = getopt(argc, argv, "s:p:I:devwioO:")) != -1 ) {
+	while( (c = getopt(argc, argv, "s:p:I:devwioDO:r:R:W:F:")) != -1 ) {
+		debug("Processing argument: -%c", c );
 		switch( c ) {
+			case 'F': watchdogFail = atoi(optarg); setWatchDog = true; break;
+			case 'W': watchdog = atoi(optarg); setWatchDog = true; break;
+			case 'R': watchdogReset = atoi(optarg); setWatchDog = true; break;
+			case 'D': debugging = true; break;
+			case 'r': reset = atoi(optarg); break;
 			case 'O': output = atoi(optarg); break;
 			case 'I': input = atoi(optarg); break;
 			case 'i': inputs = true; break;
@@ -38,14 +64,48 @@ int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
 				throw LinuxPowerUSBError( "bad argument: '%d'", c);
 		}
 	}
+	PowerUSB::debugging = verbose;
 	if( windowing ) return 5;
-	if( input == 0 && output == 0 && port == 0 && !inputs ) {
+	if( input == 0 && output == 0 && port == 0 && !inputs && reset == 0 && !setWatchDog ) {
 		throw LinuxPowerUSBError( "missing port #: -p N required");
 	}
 
 	bool how = false;
 	if( state != NULL ) {
 		how = strcasecmp( state, "on") == 0;
+	}
+
+	if( reset > 0 ) { 
+		debug("Resetting PowerUSB Board");
+		lp.resetPowerUSB();
+		debug("Closing all ports");
+		lp.closeAll();
+		for( int i = 0; i < reset; ++i ) {
+			try {
+				debug("trying setup again to detect recovery");
+				if(lp.Setup() ) {
+					debug("checking status");
+					if( lp.checkStatus() ) {
+						debug("checkStatus recovery indicated");
+						break;
+					}
+				}
+			} catch( LinuxPowerUSBError &ex ) {
+				lp.error( "%s: %s\n", argv[0], ex.what() );
+			}
+			sleep(1);
+		}
+	}
+
+	if( setWatchDog ) {
+		lp.setWatchDogInterval( watchdog, watchdogFail, watchdogReset );
+		while( true ) {
+			debug("watchdog setup results: %d", lp.getWatchdogStatus() );
+			debug("sending watchdog heartbeat...");
+			//lp.sendHeartBeat();
+			debug("sleeping after heartbeat: %d", watchdog );
+			sleep( watchdog );
+		}
 	}
 
 	if( port > 0 ) {
@@ -134,10 +194,12 @@ int main(int argc, char* argv[])
 		const int spc = 8;
 		const int plugs = 3;
 		const int cw =4;
-		p.setDebug(false);
+		debug("settingup debug");
+		p.setDebug(true);
+		debug("setup PowerUSB");
 		p.Setup();
+		debug("processing arguments");
 		ret = handleRequest(p, argc, argv);
-		p.generateClock(1, 10, 2 );
 		if( ret == 5 ) {
 			WINDOW *win = NULL;
 			bool quit = false;
