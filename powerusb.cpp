@@ -334,7 +334,7 @@ int main(int argc, char* argv[])
 				}
 
 				wrefresh(win);
-				refresh();
+				//refresh();
 				if( ch != ERR ) {
 					move(8, 0);
 					clrtoeol();
