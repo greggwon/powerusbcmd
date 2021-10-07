@@ -76,7 +76,7 @@ public :
 	LinuxPowerUSB() :pwrusb()
 	{
 	}
-	virtual ~LinuxPowerUSB() {}
+	virtual ~LinuxPowerUSB() { pwrusb.close(); }
 
 	void setDebug(bool how) { debugging = how; PowerUSB::debugging = how; }
 
@@ -90,10 +90,6 @@ public :
 		int i = -1;
 		int v = pwrusb.init( &i );
 		debug("init(&i) = %d max units, model=%d\n", v, i );
-	}
-
-	int generateClock(int port, int onTime, int offTime) {
-		return pwrusb.generateClock(port, onTime, offTime);
 	}
 
 	bool  checkStatus()

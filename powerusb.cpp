@@ -18,7 +18,7 @@ static void debug( T fmt, Args... args ) {
 }
 
 void usage(char **argv) {
-	fprintf( stderr, "Usage: %s [-devD] -p port [-s state]\n", argv[0]);
+	fprintf( stderr, "Usage: %s [-devDfm] -p port [-s state]\n", argv[0]);
 	fprintf( stderr, "       %s -r [-D] <reset-for>\n", argv[0] );
 	fprintf( stderr, "       %s -w [-D]\n", argv[0] );
 	fprintf( stderr, "       %s -R watchDogResetInv [-D] [-W watchdogInv] [-F watchdogFailCount]\n", argv[0] );
@@ -26,158 +26,222 @@ void usage(char **argv) {
 
 static bool verbose = false;
 
-int handleRequest(LinuxPowerUSB &lp, int argc, char* argv[])
-{
-	bool defState = false;
-	bool useexit = false;
-	int port = 0, input=0, output=0;
-	char *state = NULL;
-	bool windowing = false;
-	bool inputs = false;
-	bool outputs = false;
-	int watchdogFail = 1;
-	int watchdog = 10;
-	int reset = 0;
-	int watchdogReset = 5;
-	bool setWatchDog = false;
-	int c;
-	while( (c = getopt(argc, argv, "s:p:I:devwioDO:r:R:W:F:")) != -1 ) {
-		debug("Processing argument: -%c", c );
-		switch( c ) {
-			case 'F': watchdogFail = atoi(optarg); setWatchDog = true; break;
-			case 'W': watchdog = atoi(optarg); setWatchDog = true; break;
-			case 'R': watchdogReset = atoi(optarg); setWatchDog = true; break;
-			case 'D': debugging = true; break;
-			case 'r': reset = atoi(optarg); break;
-			case 'O': output = atoi(optarg); break;
-			case 'I': input = atoi(optarg); break;
-			case 'i': inputs = true; break;
-			case 'o': outputs = true; break;
-			case 'v': verbose = true; break;
-			case 'w': windowing = true; break;
-			case 'd': defState = true; break;
-			case 'p': port = atoi(optarg); break;
-			case 's': state = strdup(optarg); break;
-			case 'e': useexit = true; break;
-			case -1: break;
-			default:
-				throw LinuxPowerUSBError( "bad argument: '%d'", c);
+class ActionHandler {
+	bool defState;
+	bool useexit;
+	int port, input, output;
+	char *state;
+	bool windowing;
+	bool inputs;
+	bool outputs;
+	int watchdogFail;
+	int watchdog;
+	int reset;
+	int watchdogReset;
+	bool setWatchDog;
+	bool getModel;
+	bool getFirmware;
+	int toggleOn, toggleOff;
+	bool setupToggle;
+	public:
+	LinuxPowerUSB *lp;
+	ActionHandler( LinuxPowerUSB *lpp ) {
+		this->lp = lpp;
+		defState = false;
+		useexit = false;
+		port = 0, input=0, output=0;
+		state = NULL;
+		windowing = false;
+		setupToggle = false;
+		toggleOn = 24*3600;
+		toggleOff = 5*60;
+		inputs = false;
+		outputs = false;
+		watchdogFail = 1;
+		getFirmware = false;
+		getModel = false;
+		watchdog = 10;
+		verbose = false;
+		reset = 0;
+		watchdogReset = 5;
+		setWatchDog = false;
+	}
+	~ActionHandler() {
+		if( state != NULL ) {
+			free(state);
+			state = NULL;
 		}
 	}
-	PowerUSB::debugging = verbose;
-	if( windowing ) return 5;
-	if( input == 0 && output == 0 && port == 0 && !inputs && reset == 0 && !setWatchDog ) {
-		throw LinuxPowerUSBError( "missing port #: -p N required");
-	}
 
-	bool how = false;
-	if( state != NULL ) {
-		how = strcasecmp( state, "on") == 0;
-	}
+	int handleRequest( int argc, char* argv[])
+	{
+		LinuxPowerUSB &lp = *this->lp;
+		int c;
+		while( (c = getopt(argc, argv, "s:p:I:devwmfioDO:r:R:W:F:T:t:")) != -1 ) {
+			debug("Processing argument: -%c", c );
+			switch( c ) {
+				case 'T': toggleOn = atoi(optarg); setupToggle = true; break;
+				case 't': toggleOff = atoi(optarg); setupToggle = true; break;
+				case 'F': watchdogFail = atoi(optarg); setWatchDog = true; break;
+				case 'W': watchdog = atoi(optarg); setWatchDog = true; break;
+				case 'R': watchdogReset = atoi(optarg); setWatchDog = true; break;
+				case 'D': debugging = true; break;
+				case 'f': getFirmware = true; break;
+				case 'm': getModel = true; break;
+				case 'r': reset = atoi(optarg); break;
+				case 'O': output = atoi(optarg); break;
+				case 'I': input = atoi(optarg); break;
+				case 'i': inputs = true; break;
+				case 'o': outputs = true; break;
+				case 'v': verbose = true; break;
+				case 'w': windowing = true; break;
+				case 'd': defState = true; break;
+				case 'p': port = atoi(optarg); break;
+				case 's': state = strdup(optarg); break;
+				case 'e': useexit = true; break;
+				case -1: break;
+				default:
+					throw LinuxPowerUSBError( "bad argument: '%d'", c);
+			}
+		}
+		PowerUSB::debugging = verbose;
+		debug("...Set verbose=%d", verbose);
+		if( windowing ) return 5;
+		if( input == 0 && output == 0 && port == 0 && !inputs && reset == 0 && !setWatchDog && !getFirmware && !getModel ) {
+			throw LinuxPowerUSBError( "missing port #: -p N required");
+		}
 
-	if( reset > 0 ) { 
-		debug("Resetting PowerUSB Board");
-		lp.resetPowerUSB();
-		debug("Closing all ports");
-		lp.closeAll();
-		for( int i = 0; i < reset; ++i ) {
-			try {
-				debug("trying setup again to detect recovery");
-				if(lp.Setup() ) {
-					debug("checking status");
-					if( lp.checkStatus() ) {
-						debug("checkStatus recovery indicated");
-						break;
+		bool how = false;
+		if( state != NULL ) {
+			how = strcasecmp( state, "on") == 0;
+		}
+		debug("...Checking reset=%d", reset);
+		if( reset > 0 ) { 
+			debug("Resetting PowerUSB Board");
+			lp.powerCycleIn(reset);
+			debug("Closing all ports");
+			lp.closeAll();
+			for( int i = 0; i < reset; ++i ) {
+				try {
+					debug("trying setup again to detect recovery");
+					if(lp.Setup() ) {
+						debug("checking status");
+						if( lp.checkStatus() ) {
+							debug("checkStatus recovery indicated");
+							break;
+						}
 					}
+				} catch( LinuxPowerUSBError &ex ) {
+					lp.error( "%s: %s\n", argv[0], ex.what() );
 				}
-			} catch( LinuxPowerUSBError &ex ) {
-				lp.error( "%s: %s\n", argv[0], ex.what() );
+				sleep(1);
 			}
-			sleep(1);
 		}
-	}
-
-	if( setWatchDog ) {
-		lp.setWatchDogInterval( watchdog, watchdogFail, watchdogReset );
-		while( true ) {
-			debug("watchdog setup results: %d", lp.getWatchdogStatus() );
-			debug("sending watchdog heartbeat...");
-			//lp.sendHeartBeat();
-			debug("sleeping after heartbeat: %d", watchdog );
-			sleep( watchdog );
+		if( getFirmware ) {
+			int vers = lp.getVersion();
+			printf( "%d\n", vers );
 		}
-	}
-
-	if( port > 0 ) {
-		if( defState ) {
-			if( state == NULL )
-				if( useexit ) return(lp.getPortDefaultState(port));
-				else lp.reportDefault(lp.getPortDefaultState(port), port, verbose);
-			else
-				lp.setPortDefaultState( port, how );
-
-		} else {
-			if( state == NULL )
-				if( useexit ) return(lp.getPortState(port));
-				else lp.reportStatus(lp.getPortState(port), port, verbose);
-			else
-				lp.setPortState( port, how );
-		}
-	}
-
-	if( output > 0 ) {
-		int st[numinput] = {0};
-		if( output < 0 || output >= numinput ) {
-			throw new LinuxPowerUSBArgsError( "Bad output #%d", input );
+		if( getModel ) {
+			std::string mod = lp.getModel();
+			printf( "%s\n", mod.c_str() );
 		}
 
-		if( state !=  NULL ) {
-			st[output] = how;
-			lp.setOutputState( st );
-		} else {
-			lp.getOutputStates( st );
-			if( verbose ) {
-				lp.report("Output #%d = %d\n", output, st[output-1] );
+		debug("...Checking setWatchDog=%d watchdog=%d, fail=%d, resetFor=%d", 
+			setWatchDog, watchdog, watchdogFail, watchdogReset );
+		if( setWatchDog ) {
+			lp.setWatchDogInterval( watchdog, watchdogFail, watchdogReset );
+			while( true ) {
+				debug("watchdog setup results: %d", lp.getWatchdogStatus() );
+				debug("sending watchdog heartbeat...");
+				//lp.sendHeartBeat();
+				debug("sleeping after heartbeat: %d", watchdog );
+				sleep( watchdog );
+			}
+		}
+
+		debug("...Checking port=%d", port);
+		if( port > 0 ) {
+			if( setupToggle ) {
+				debug("setup port=%d toggle: on=%d, off=%d", port, toggleOn, toggleOff );
+				int v = lp.setupPortToggle( port, toggleOn, toggleOff );
+				debug("setupPortToggle: %d", v );
+				sleep(60);
 			} else {
-				exit( st[output-1] );
+				if( defState ) {
+					if( state == NULL )
+						if( useexit ) return(lp.getPortDefaultState(port));
+						else lp.reportDefault(lp.getPortDefaultState(port), port, verbose);
+					else
+						lp.setPortDefaultState( port, how );
+
+				} else {
+					if( state == NULL )
+						if( useexit ) return(lp.getPortState(port));
+						else lp.reportStatus(lp.getPortState(port), port, verbose);
+					else
+						lp.setPortState( port, how );
+				}
 			}
 		}
-	}
 
-	if( input > 0 ) {
-		int st[numinput];
-		if( input >= numinput ) {
-			throw new LinuxPowerUSBArgsError( "Bad input #%d", input );
+		debug("...Checking output=%d", output);
+		if( output > 0 ) {
+			int st[numinput] = {0};
+			if( output < 0 || output >= numinput ) {
+				throw new LinuxPowerUSBArgsError( "Bad output #%d", input );
+			}
+
+			if( state !=  NULL ) {
+				st[output] = how;
+				lp.setOutputState( st );
+			} else {
+				lp.getOutputStates( st );
+				if( verbose ) {
+					lp.report("Output #%d = %d\n", output, st[output-1] );
+				} else {
+					exit( st[output-1] );
+				}
+			}
 		}
-		lp.getInputStates(st);
-		if( verbose ) {
-			lp.report("input #%d = %d\n", input, st[input-1] );
-		} else {
-			exit(st[input-1]);
+
+		debug("...Checking input=%d", input);
+		if( input > 0 ) {
+			int st[numinput];
+			if( input >= numinput ) {
+				throw new LinuxPowerUSBArgsError( "Bad input #%d", input );
+			}
+			lp.getInputStates(st);
+			if( verbose ) {
+				lp.report("input #%d = %d\n", input, st[input-1] );
+			} else {
+				exit(st[input-1]);
+			}
 		}
+		debug("...Checking inputs=0x%02x", inputs);
+		if( inputs ) {
+			int st[8];
+			lp.getInputStates(st);
+			lp.report("Inputs: ");
+			for( int i = 0; i < numinput; ++i ) {
+				lp.report("%d=%d", i+1, st[i] );
+				if( i < 6 ) lp.report(", ");
+			}
+			lp.report("\n");
+		}
+		debug("...Checking outputs=0x%02x", outputs);
+		if( outputs ) {
+			int st[8];
+			lp.getOutputStates(st);
+			lp.report("Outputs: ");
+			for( int i = 0; i < numinput; ++i ) {
+				lp.report("%d=%d", i+1, st[i] );
+				if( i < 6 ) lp.report(", ");
+			}
+			lp.report("\n");
+		}
+		return 0;
 	}
-	if( inputs ) {
-		int st[8];
-		lp.getInputStates(st);
-		lp.report("Inputs: ");
-		for( int i = 0; i < numinput; ++i ) {
-			lp.report("%d=%d", i+1, st[i] );
-			if( i < 6 ) lp.report(", ");
-		}
-		lp.report("\n");
-	}
-	if( outputs ) {
-		int st[8];
-		lp.getOutputStates(st);
-		lp.report("Outputs: ");
-		for( int i = 0; i < numinput; ++i ) {
-			lp.report("%d=%d", i+1, st[i] );
-			if( i < 6 ) lp.report(", ");
-		}
-		lp.report("\n");
-	}
-	return 0;
-}
+};
 
 static void moveDeviceBy( LinuxPowerUSB &p, int inc ) {
 	int cur = p.getCurrentDevice();
@@ -195,11 +259,12 @@ int main(int argc, char* argv[])
 		const int plugs = 3;
 		const int cw =4;
 		debug("settingup debug");
-		p.setDebug(true);
+		p.setDebug(false);
 		debug("setup PowerUSB");
 		p.Setup();
 		debug("processing arguments");
-		ret = handleRequest(p, argc, argv);
+		ActionHandler ah(&p);
+		ret = ah.handleRequest( argc, argv);
 		if( ret == 5 ) {
 			WINDOW *win = NULL;
 			bool quit = false;
@@ -326,5 +391,7 @@ int main(int argc, char* argv[])
 		p.error( "%s: %s\n", argv[0], ex.what() );
 		usage( argv );
 	}
+	debug("Closing all...");
+	p.closeAll();
 	//return 2;
 }
