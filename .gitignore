@@ -1,0 +1,7 @@
+tags
+.gitignore
+lib/
+udev rules/
+powerusb
+powerusb.o
+

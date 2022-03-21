@@ -20,19 +20,33 @@ and the
 of
 .I 0x003f.
 .SH OPTIONS
-.IP -e
-Use exit code to report state instead of string values printed.
 .IP -d
 Switch to default state manipulation instead of control of ports.
+.IP -e
+Use exit code to report state instead of string values printed.
+.IP -v
+Increase verbosity of detail printed.
+-IP -D
+Show debugging information.
+.IP f
+Get firmware version.
+.IP m
+Get device model information.
 .IP "-p N"
 Specify port number as N, 1, 2 or 3 must be provided.
 .IP "-s on/off"
 Specify state to set as default (-d also used) or as current state.
+.IP -r
+Reset onboard controller.
 .IP -w
 Open in windowing mode providing a curses interface to changing plug state
 and observing inputs and outputs.
-.IP -v
-Increase verbosity of detail printed.
+.IP "-R [watchdog reset interval]"
+Configure Watchdog Reset period for power to remain off.
+.IP "-W [watchdog period]"
+Period of time for each watchdog petting operation.
+.IP "-F [fail count]"
+Set number of times the watchdog pet must fail before starting watchdog operations.
 .SH EXIT STATUS
 If the -e argument is specified than a 0 exit means off and a 1 exit means on.
 An exit code of 2 always is used for errors.
